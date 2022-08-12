@@ -28,7 +28,7 @@ public class RectWhiteNoise : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        foreach(var pos in Enumerable.Range(0, 100).SelectMany(x => Enumerable.Range(0, 100).Select(y => new Vector3Int(x, y, 0))))
+        foreach(var pos in MapMath.Generate(100).Select(p => new Vector3Int(p.x, p.y, 0)))
         {
             tilemap.SetTile(pos, tile);
 
@@ -42,5 +42,23 @@ public class RectWhiteNoise : MonoBehaviour
     void Update()
     {
         
+    }
+}
+
+public class MapMath
+{
+    private static (int x, int y)[] NeighbourIndexs = new (int x, int y)[]
+    {
+        (1, 1), (1, 0), (1, -1), (0, 1), (0, -1), (-1, 1), (-1, 0), (-1, -1)
+    };
+
+    public static IEnumerable<(int x, int y)> Generate(int size)
+    {
+        return Enumerable.Range(size/2*-1, size).SelectMany(x => Enumerable.Range(size / 2 * -1, size).Select(y => (x, y)));
+    }
+
+    public static IEnumerable<(int x, int y)> GetNeighbours((int x, int y) coord)
+    {
+        return NeighbourIndexs.Select(index => (coord.x + index.x, coord.y + index.y));
     }
 }
