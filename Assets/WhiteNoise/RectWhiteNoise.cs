@@ -47,9 +47,9 @@ public class RectWhiteNoise : MonoBehaviour
 
 public class MapMath
 {
-    private static (int x, int y)[] NeighbourIndexs = new (int x, int y)[]
+    public readonly static (int x, int y)[] NeighbourIndexs = new (int x, int y)[]
     {
-        (1, 1), (1, 0), (1, -1), (0, 1), (0, -1), (-1, 1), (-1, 0), (-1, -1)
+        (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1)
     };
 
     public static IEnumerable<(int x, int y)> Generate(int size)
