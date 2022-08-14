@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public class DynamicMapWithDirect : MonoBehaviour
+public class DynamicMapWithRandomDirect : MonoBehaviour
 {
     public Tilemap tilemap;
     public Sprite sprite;
@@ -14,14 +14,14 @@ public class DynamicMapWithDirect : MonoBehaviour
 
     public Dictionary<(int x, int y), int> dictPowerValue = new Dictionary<(int x, int y), int>()
     {
-        { (0, 1), 10},
-        { (1, 1), 40},
-        { (1, 0), 100},
-        { (1, -1), 50},
-        { (0, -1), 50},
-        { (-1, -1), 50},
-        { (-1, 0), 100},
-        { (-1, 1), 50},
+        { (0, 1), 9},
+        { (1, 1), 4},
+        { (1, 0), 8},
+        { (1, -1), 5},
+        { (0, -1), 9},
+        { (-1, -1), 5},
+        { (-1, 0), 10},
+        { (-1, 1), 5},
     };
 
     public Dictionary<(int x, int y), int> dictCalcValue = new Dictionary<(int x, int y), int>();
@@ -121,16 +121,20 @@ public class DynamicMapWithDirect : MonoBehaviour
                 var oldEdges = MapMath.GetNeighbours(edge).Where(x => edges.Contains(x)).ToArray();
 
                 var value = oldEdges.Max(e => dictWeight[(edge.x - e.x, edge.y - e.y)]);
+
+                var real = Random.Range(value, 11);
+                //var real = value;
+
                 if (!dictCalcValue.ContainsKey(edge))
                 {
-                    dictCalcValue[edge] = value;
+                    dictCalcValue[edge] = real;
                 }
                 else
                 {
-                    dictCalcValue[edge] += value;
+                    dictCalcValue[edge] += real;
                 }
 
-                if (dictCalcValue[edge] >= 100)
+                if (dictCalcValue[edge] >= 10)
                 {
                     newEdges.Add(edge);
                 }

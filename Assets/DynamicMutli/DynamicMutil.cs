@@ -1,17 +1,17 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public class DynamicRectMap : MonoBehaviour
+public class DynamicMutil : MonoBehaviour
 {
     public Tilemap tilemap;
     public Sprite sprite;
 
-    //public HashSet<(int x, int y)> centers;
-    //public HashSet<(int x, int y)> edges;
+    public HashSet<(int x, int y)> centers;
+    public Dictionary<Color, HashSet<(int x, int y)>> edgesGroup;
+    public Dictionary<Color, BlockBuilder> builderDict;
 
     public Tile tile
     {
@@ -29,11 +29,12 @@ public class DynamicRectMap : MonoBehaviour
 
     private Tile _tile;
 
-    BlockBuilder blockBuilder;
     // Start is called before the first frame update
     void Start()
     {
-        blockBuilder = new BlockBuilder(100);
+        centers = new HashSet<(int x, int y)>();
+        builderDict = Enumerable.Range(0, 20).Select(_ => new BlockBuilder(100, (Random.Range(0, 100), Random.Range(0, 100)), centers))
+            .ToDictionary(_ => new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)), v => v);
 
         StartCoroutine(OnTimer());
     }
@@ -41,23 +42,24 @@ public class DynamicRectMap : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+
     }
 
     IEnumerator OnTimer()
     {
-        foreach (var elems in blockBuilder.Build())
-        {
-            foreach(var elem in elems)
-            {
-                var pos = new Vector3Int(elem.x, elem.y, 0);
-                var color = new Color(UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f));
+        yield return new WaitForSeconds(1);
 
-                SetTileColor(pos, color);
+        foreach(var builder in builderDict)
+        {
+            foreach (var elems in builder.Value.Build())
+            {
+                foreach (var elem in elems)
+                {
+                    var pos = new Vector3Int(elem.x, elem.y, 0);
+                    SetTileColor(pos, builder.Key);
+                }
             }
         }
-
-        yield return new WaitForSeconds(1);
 
         StartCoroutine(OnTimer());
     }
@@ -74,29 +76,33 @@ public class DynamicRectMap : MonoBehaviour
         private HashSet<(int x, int y)> centers;
         private HashSet<(int x, int y)> edges;
         private int size;
+        private bool isStart = true;
+        private (int x, int y) originPoint;
 
-        public BlockBuilder(int size)
+        public BlockBuilder(int size, (int x, int y) originPoint, HashSet<(int x, int y)> centers)
         {
-            centers = new HashSet<(int x, int y)>();
             edges = new HashSet<(int x, int y)>();
 
+            this.centers = centers;
+            this.originPoint = originPoint;
             this.size = size;
         }
 
         public IEnumerable<(int x, int y)[]> Build()
         {
-            if(centers.Count() == 0)
+            if (isStart)
             {
-                var startIndex = (0, 0);
-                edges.Add(startIndex);
-                centers.Add(startIndex);
+                edges.Add(originPoint);
+                centers.Add(originPoint);
 
                 yield return edges.ToArray();
+
+                isStart = false;
             }
 
             var newEdges = edges.SelectMany(x => MapMath.GetNeighbours(x))
                 .Where(n => !centers.Contains(n) && !edges.Contains(n))
-                .Where(n => (int)Math.Abs(n.x) < size && (int)Math.Abs(n.y) < size)
+                .Where(n => (int)System.Math.Abs(n.x) < size && (int)System.Math.Abs(n.y) < size)
                 .ToHashSet();
 
             centers.UnionWith(newEdges);
