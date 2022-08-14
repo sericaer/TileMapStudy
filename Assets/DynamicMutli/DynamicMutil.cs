@@ -10,7 +10,6 @@ public class DynamicMutil : MonoBehaviour
     public Sprite sprite;
 
     public HashSet<(int x, int y)> centers;
-    public Dictionary<Color, HashSet<(int x, int y)>> edgesGroup;
     public Dictionary<Color, BlockBuilder> builderDict;
 
     public Tile tile

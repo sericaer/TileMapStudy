@@ -74,7 +74,7 @@ public class DynamicRectMap : MonoBehaviour
         private HashSet<(int x, int y)> centers;
         private HashSet<(int x, int y)> edges;
         private int size;
-
+        private bool isStart = true;
         public BlockBuilder(int size)
         {
             centers = new HashSet<(int x, int y)>();
@@ -85,13 +85,14 @@ public class DynamicRectMap : MonoBehaviour
 
         public IEnumerable<(int x, int y)[]> Build()
         {
-            if(centers.Count() == 0)
+            if(isStart)
             {
                 var startIndex = (0, 0);
                 edges.Add(startIndex);
-                centers.Add(startIndex);
 
                 yield return edges.ToArray();
+
+                isStart = false;
             }
 
             var newEdges = edges.SelectMany(x => MapMath.GetNeighbours(x))

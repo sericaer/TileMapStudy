@@ -141,7 +141,7 @@ public class DynamicMapWithDirect : MonoBehaviour
             }
 
             centers.UnionWith(edges.Except(revEdges));
-            edges = newEdges.Union(revEdges).ToHashSet();
+            edges = newEdges.ToHashSet();
 
             yield return newEdges.ToArray();
         }
