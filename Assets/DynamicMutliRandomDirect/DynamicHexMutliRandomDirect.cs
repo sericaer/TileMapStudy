@@ -9,8 +9,10 @@ public class DynamicHexMutliRandomDirect : MonoBehaviour
     public Tilemap tilemap;
     public Sprite sprite;
 
-    public HashSet<(int x, int y)> centers;
-    public Dictionary<Color, BlockBuilder> builderDict;
+    public BlockBuilderGroup builderGroup;
+
+    public HashSet<Color> colors;
+
     public Tile tile
     {
         get
@@ -30,19 +32,13 @@ public class DynamicHexMutliRandomDirect : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        centers = new HashSet<(int x, int y)>();
-        builderDict = Enumerable.Range(0, 100)
-            .Select(_ => new BlockBuilder(100, (Random.Range(-100, 100), Random.Range(-100, 100)), centers, 
-                                        new int[]
-                                        {
-                                            Random.Range(1,9),
-                                            Random.Range(1,9),
-                                            Random.Range(1,9),
-                                            Random.Range(1,9),
-                                            Random.Range(1,9),
-                                            Random.Range(1,9),
-                                        })
-                    ).ToDictionary(_ => new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)), v => v);
+        colors = new HashSet<Color>();
+        while (colors.Count < 100)
+        {
+            colors.Add(new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)));
+        }
+
+        builderGroup = new BlockBuilderGroup(100, 100);
 
         StartCoroutine(OnTimer());
     }
@@ -57,15 +53,13 @@ public class DynamicHexMutliRandomDirect : MonoBehaviour
     {
         yield return new WaitForSeconds(1);
 
-        foreach (var builder in builderDict)
+        var stepResults = builderGroup.BuildInStep();
+        for(int i=0; i< stepResults.Length; i++)
         {
-            foreach (var elems in builder.Value.Build())
+            foreach(var elem in stepResults[i].elements)
             {
-                foreach (var elem in elems)
-                {
-                    var pos = new Vector3Int(elem.x, elem.y, 0);
-                    SetTileColor(pos, builder.Key);
-                }
+                var pos = new Vector3Int(elem.x, elem.y, 0);
+                SetTileColor(pos, colors.ElementAt(i));
             }
         }
 
@@ -79,67 +73,104 @@ public class DynamicHexMutliRandomDirect : MonoBehaviour
         tilemap.SetColor(pos, color);
     }
 
-    public class BlockBuilder
+    public class BlockBuilderGroup
     {
         private HashSet<(int x, int y)> centers;
-        private HashSet<(int x, int y)> edges;
-        private int size;
-        private bool isStart = true;
-        private (int x, int y) originPoint;
-        private int[] weightDirectValues;
+        private IEnumerable<Builder> builders;
 
-        public BlockBuilder(int size, (int x, int y) originPoint, HashSet<(int x, int y)> centers, int[] weightDirectValues)
+        public BlockBuilderGroup(int size, int blockCount)
         {
-            edges = new HashSet<(int x, int y)>();
-
-            this.centers = centers;
-            this.originPoint = originPoint;
-            this.size = size;
-            this.weightDirectValues = weightDirectValues;
+            centers = new HashSet<(int x, int y)>();
+            builders = Enumerable.Range(0, blockCount)
+                .Select(_ => new Builder(100, 
+                                            (Random.Range(-100, 100), Random.Range(-100, 100)), 
+                                            centers,
+                                            new int[]
+                                            {
+                                                Random.Range(1,9),
+                                                Random.Range(1,9),
+                                                Random.Range(1,9),
+                                                Random.Range(1,9),
+                                                Random.Range(1,9),
+                                                Random.Range(1,9),
+                                            })
+                        ).ToArray();
         }
 
-        public IEnumerable<(int x, int y)[]> Build()
+        public StepResult[] BuildInStep()
         {
-            if (isStart)
+            return builders.Select(x => x.BuildInStep()).ToArray();
+        }
+
+        public class StepResult
+        {
+            public (int x, int y)[] elements;
+        }
+
+        public class Builder
+        {
+            private HashSet<(int x, int y)> centers;
+            private HashSet<(int x, int y)> edges;
+            private int size;
+            private bool isStart = true;
+            private (int x, int y) originPoint;
+            private int[] weightDirectValues;
+
+            public Builder(int size, (int x, int y) originPoint, HashSet<(int x, int y)> centers, int[] weightDirectValues)
             {
-                edges.Add(originPoint);
+                edges = new HashSet<(int x, int y)>();
 
-                yield return edges.ToArray();
-
-                isStart = false;
+                this.centers = centers;
+                this.originPoint = originPoint;
+                this.size = size;
+                this.weightDirectValues = weightDirectValues;
             }
 
-            var tempEdges = edges.SelectMany(x => Hexagon.GetNeighbors(x))
-                .Where(n => !centers.Contains(n))
-                .Where(n => (int)System.Math.Abs(n.x) < size && (int)System.Math.Abs(n.y) < size)
-                .ToHashSet();
-
-            var newEdges = new HashSet<(int x, int y)>();
-            var revEdges = new HashSet<(int x, int y)>();
-
-            foreach (var edge in tempEdges)
+            public StepResult BuildInStep()
             {
-                var oldEdges = Hexagon.GetNeighbors(edge).Where(x => edges.Contains(x)).ToArray();
-
-                var value = oldEdges.Max(e => weightDirectValues[Hexagon.GetDirectIndex(e, edge)]);
-
-                var real = Random.Range(1, 11);
-                if (real <= value)
+                if (isStart)
                 {
-                    newEdges.Add(edge);
+                    isStart = false;
+
+                    edges.Add(originPoint);
+
+                    return new StepResult() { elements = edges.ToArray() };
                 }
-                else
+
+                var tempEdges = edges.SelectMany(x => Hexagon.GetNeighbors(x))
+                    .Where(n => !centers.Contains(n))
+                    .Where(n => (int)System.Math.Abs(n.x) < size && (int)System.Math.Abs(n.y) < size)
+                    .ToHashSet();
+
+                var newEdges = new HashSet<(int x, int y)>();
+                var revEdges = new HashSet<(int x, int y)>();
+
+                foreach (var edge in tempEdges)
                 {
-                    revEdges.UnionWith(oldEdges);
+                    var oldEdges = Hexagon.GetNeighbors(edge).Where(x => edges.Contains(x)).ToArray();
+
+                    var value = oldEdges.Max(e => weightDirectValues[Hexagon.GetDirectIndex(e, edge)]);
+
+                    var real = Random.Range(1, 11);
+                    if (real <= value)
+                    {
+                        newEdges.Add(edge);
+                    }
+                    else
+                    {
+                        revEdges.UnionWith(oldEdges);
+                    }
                 }
+
+                newEdges.UnionWith(revEdges);
+                centers.UnionWith(newEdges);
+
+                edges = newEdges;
+
+                return new StepResult() { elements = edges.ToArray() };
             }
-
-            newEdges.UnionWith(revEdges);
-            centers.UnionWith(newEdges);
-    
-            edges = newEdges;
-
-            yield return newEdges.ToArray();
         }
     }
+
+    
 }
