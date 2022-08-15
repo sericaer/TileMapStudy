@@ -102,7 +102,6 @@ public class DynamicMutliRandomDirect : MonoBehaviour
         private bool isStart = true;
         private (int x, int y) originPoint;
         private Dictionary<(int x, int y), int> dictWeight;
-        private Dictionary<(int x, int y), int> dictCalcValue;
 
         public BlockBuilder(int size, (int x, int y) originPoint, HashSet<(int x, int y)> centers, Dictionary<(int x, int y), int> dictWeightValue)
         {
@@ -112,7 +111,6 @@ public class DynamicMutliRandomDirect : MonoBehaviour
             this.originPoint = originPoint;
             this.size = size;
             this.dictWeight = dictWeightValue;
-            this.dictCalcValue = new Dictionary<(int x, int y), int>();
         }
 
         public IEnumerable<(int x, int y)[]> Build()

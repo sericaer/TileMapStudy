@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public class DynamicMapWithRandomDirect : MonoBehaviour
+public class DynamicHexMapWithRandomDirect : MonoBehaviour
 {
     public Tilemap tilemap;
     public Sprite sprite;
@@ -12,27 +12,14 @@ public class DynamicMapWithRandomDirect : MonoBehaviour
     public HashSet<(int x, int y)> centers;
     public HashSet<(int x, int y)> edges;
 
-    public Dictionary<(int x, int y), int> dictPowerValue = new Dictionary<(int x, int y), int>()
-    {
-        { (0, 1), 10},
-        { (1, 1), 0},
-        { (1, 0), 8},
-        { (1, -1), 0},
-        { (0, -1), 2},
-        { (-1, -1), 0},
-        { (-1, 0), 5},
-        { (-1, 1), 0},
-    };
-
     public int[] weightDirectValues = new int[]
-    { 10,
-      0,
-      8,
-      0,
-      2,
-      0,
-      5,
-      0,
+    {
+      10,
+      10,
+      10,
+      10,
+      10,
+      10
     };
 
     public Tile tile
@@ -120,7 +107,7 @@ public class DynamicMapWithRandomDirect : MonoBehaviour
                 yield return edges.ToArray();
             }
 
-            var tempEdges = edges.SelectMany(x => MapMath.GetNeighbours(x))
+            var tempEdges = edges.SelectMany(x => Hexagon.GetNeighbors(x))
                 .Where(n => !centers.Contains(n) && !edges.Contains(n))
                 .Where(n => (int)System.Math.Abs(n.x) < size && (int)System.Math.Abs(n.y) < size)
                 .ToHashSet();
@@ -130,12 +117,13 @@ public class DynamicMapWithRandomDirect : MonoBehaviour
 
             foreach (var edge in tempEdges)
             {
-                var oldEdges = MapMath.GetNeighbours(edge).Where(x => edges.Contains(x)).ToArray();
+                var oldEdges = Hexagon.GetNeighbors(edge).Where(x => edges.Contains(x)).ToArray();
 
-                var value = oldEdges.Max(e => weightDirectValues[MapMath.GetDirect(edge, e)]);
+                var value = oldEdges.Max(e => weightDirectValues[Hexagon.GetDirectIndex(edge, e)]);
+
 
                 var real = Random.Range(1, 11);
-                if (real < value)
+                if (real <= value)
                 {
                     newEdges.Add(edge);
                 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using System.Linq;
+using System;
 
 public class RectWhiteNoise : MonoBehaviour
 {
@@ -34,7 +35,7 @@ public class RectWhiteNoise : MonoBehaviour
 
             tilemap.SetTileFlags(pos, TileFlags.None);
 
-            tilemap.SetColor(pos, new Color(Random.Range(0f,1f), Random.Range(0f, 1f), Random.Range(0f, 1f)));
+            tilemap.SetColor(pos, new Color(UnityEngine.Random.Range(0f,1f), UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f)));
         }
     }
 
@@ -47,7 +48,8 @@ public class RectWhiteNoise : MonoBehaviour
 
 public class MapMath
 {
-    public readonly static (int x, int y)[] NeighbourIndexs = new (int x, int y)[]
+
+    public readonly static (int x, int y)[] NeighbourIndexsRect = new (int x, int y)[]
     {
         (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1)
     };
@@ -59,6 +61,12 @@ public class MapMath
 
     public static IEnumerable<(int x, int y)> GetNeighbours((int x, int y) coord)
     {
-        return NeighbourIndexs.Select(index => (coord.x + index.x, coord.y + index.y));
+        return NeighbourIndexsRect.Select(index => (coord.x + index.x, coord.y + index.y));
+    }
+
+    internal static int GetDirect((int x, int y) target, (int x, int y) origin)
+    {
+        var direct = (target.x - origin.x, target.y - origin.y);
+        return Array.IndexOf(NeighbourIndexsRect, direct);
     }
 }

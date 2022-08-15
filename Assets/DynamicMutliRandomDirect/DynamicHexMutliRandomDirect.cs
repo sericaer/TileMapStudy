@@ -4,37 +4,13 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public class DynamicMapWithRandomDirect : MonoBehaviour
+public class DynamicHexMutliRandomDirect : MonoBehaviour
 {
     public Tilemap tilemap;
     public Sprite sprite;
 
     public HashSet<(int x, int y)> centers;
-    public HashSet<(int x, int y)> edges;
-
-    public Dictionary<(int x, int y), int> dictPowerValue = new Dictionary<(int x, int y), int>()
-    {
-        { (0, 1), 10},
-        { (1, 1), 0},
-        { (1, 0), 8},
-        { (1, -1), 0},
-        { (0, -1), 2},
-        { (-1, -1), 0},
-        { (-1, 0), 5},
-        { (-1, 1), 0},
-    };
-
-    public int[] weightDirectValues = new int[]
-    { 10,
-      0,
-      8,
-      0,
-      2,
-      0,
-      5,
-      0,
-    };
-
+    public Dictionary<Color, BlockBuilder> builderDict;
     public Tile tile
     {
         get
@@ -51,12 +27,22 @@ public class DynamicMapWithRandomDirect : MonoBehaviour
 
     private Tile _tile;
 
-    private BlockBuilder blockBuilder;
-
     // Start is called before the first frame update
     void Start()
     {
-        blockBuilder = new BlockBuilder(100, weightDirectValues);
+        centers = new HashSet<(int x, int y)>();
+        builderDict = Enumerable.Range(0, 100)
+            .Select(_ => new BlockBuilder(100, (Random.Range(-100, 100), Random.Range(-100, 100)), centers, 
+                                        new int[]
+                                        {
+                                            Random.Range(1,9),
+                                            Random.Range(1,9),
+                                            Random.Range(1,9),
+                                            Random.Range(1,9),
+                                            Random.Range(1,9),
+                                            Random.Range(1,9),
+                                        })
+                    ).ToDictionary(_ => new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)), v => v);
 
         StartCoroutine(OnTimer());
     }
@@ -71,14 +57,15 @@ public class DynamicMapWithRandomDirect : MonoBehaviour
     {
         yield return new WaitForSeconds(1);
 
-        foreach (var elems in blockBuilder.Build())
+        foreach (var builder in builderDict)
         {
-            foreach (var elem in elems)
+            foreach (var elems in builder.Value.Build())
             {
-                var pos = new Vector3Int(elem.x, elem.y, 0);
-                var color = new Color(UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f));
-
-                SetTileColor(pos, color);
+                foreach (var elem in elems)
+                {
+                    var pos = new Vector3Int(elem.x, elem.y, 0);
+                    SetTileColor(pos, builder.Key);
+                }
             }
         }
 
@@ -92,36 +79,38 @@ public class DynamicMapWithRandomDirect : MonoBehaviour
         tilemap.SetColor(pos, color);
     }
 
-
     public class BlockBuilder
     {
         private HashSet<(int x, int y)> centers;
         private HashSet<(int x, int y)> edges;
         private int size;
+        private bool isStart = true;
+        private (int x, int y) originPoint;
         private int[] weightDirectValues;
 
-        public BlockBuilder(int size, int[] weightDirectValues)
+        public BlockBuilder(int size, (int x, int y) originPoint, HashSet<(int x, int y)> centers, int[] weightDirectValues)
         {
-            centers = new HashSet<(int x, int y)>();
             edges = new HashSet<(int x, int y)>();
 
+            this.centers = centers;
+            this.originPoint = originPoint;
             this.size = size;
             this.weightDirectValues = weightDirectValues;
         }
 
         public IEnumerable<(int x, int y)[]> Build()
         {
-            if (centers.Count() == 0)
+            if (isStart)
             {
-                var startIndex = (0, 0);
-                edges.Add(startIndex);
-                centers.Add(startIndex);
+                edges.Add(originPoint);
 
                 yield return edges.ToArray();
+
+                isStart = false;
             }
 
-            var tempEdges = edges.SelectMany(x => MapMath.GetNeighbours(x))
-                .Where(n => !centers.Contains(n) && !edges.Contains(n))
+            var tempEdges = edges.SelectMany(x => Hexagon.GetNeighbors(x))
+                .Where(n => !centers.Contains(n))
                 .Where(n => (int)System.Math.Abs(n.x) < size && (int)System.Math.Abs(n.y) < size)
                 .ToHashSet();
 
@@ -130,12 +119,12 @@ public class DynamicMapWithRandomDirect : MonoBehaviour
 
             foreach (var edge in tempEdges)
             {
-                var oldEdges = MapMath.GetNeighbours(edge).Where(x => edges.Contains(x)).ToArray();
+                var oldEdges = Hexagon.GetNeighbors(edge).Where(x => edges.Contains(x)).ToArray();
 
-                var value = oldEdges.Max(e => weightDirectValues[MapMath.GetDirect(edge, e)]);
+                var value = oldEdges.Max(e => weightDirectValues[Hexagon.GetDirectIndex(e, edge)]);
 
                 var real = Random.Range(1, 11);
-                if (real < value)
+                if (real <= value)
                 {
                     newEdges.Add(edge);
                 }
@@ -145,8 +134,10 @@ public class DynamicMapWithRandomDirect : MonoBehaviour
                 }
             }
 
-            centers.UnionWith(edges.Except(revEdges));
-            edges = newEdges.Union(revEdges).ToHashSet();
+            newEdges.UnionWith(revEdges);
+            centers.UnionWith(newEdges);
+    
+            edges = newEdges;
 
             yield return newEdges.ToArray();
         }

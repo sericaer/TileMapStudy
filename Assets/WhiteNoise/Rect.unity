@@ -417,4 +417,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   tilemap: {fileID: 176376817}
-  sprite: {fileID: 7482667652216324306, guid: 67eae5582e8a12d48a87d8018e417e80, type: 3}
+  sprite: {fileID: 7482667652216324306, guid: a9a2e9bdd1da39647ac7b71f00750e51, type: 3}
