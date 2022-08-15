@@ -40,7 +40,18 @@ public class DynamicHexMutliRandomDirect : MonoBehaviour
 
         builderGroup = new BlockBuilderGroup(100, 100);
 
-        StartCoroutine(OnTimer());
+        //StartCoroutine(OnTimer());
+
+        var rslt = builderGroup.Build();
+        for (int i = 0; i < rslt.Length; i++)
+        {
+            foreach (var elem in rslt[i])
+            {
+                var pos = new Vector3Int(elem.x, elem.y, 0);
+                SetTileColor(pos, colors.ElementAt(i));
+            }
+        }
+        
     }
 
     // Update is called once per frame
@@ -75,24 +86,26 @@ public class DynamicHexMutliRandomDirect : MonoBehaviour
 
     public class BlockBuilderGroup
     {
-        private HashSet<(int x, int y)> centers;
         private IEnumerable<Builder> builders;
 
         public BlockBuilderGroup(int size, int blockCount)
         {
-            centers = new HashSet<(int x, int y)>();
+            Builder.isExist = (n) =>
+            {
+                return builders.Any(x => x.centers.Contains(n));
+            };
+
             builders = Enumerable.Range(0, blockCount)
                 .Select(_ => new Builder(100, 
                                             (Random.Range(-100, 100), Random.Range(-100, 100)), 
-                                            centers,
                                             new int[]
                                             {
-                                                Random.Range(1,9),
-                                                Random.Range(1,9),
-                                                Random.Range(1,9),
-                                                Random.Range(1,9),
-                                                Random.Range(1,9),
-                                                Random.Range(1,9),
+                                                Random.Range(1,10),
+                                                Random.Range(1,10),
+                                                Random.Range(1,10),
+                                                Random.Range(1,10),
+                                                Random.Range(1,10),
+                                                Random.Range(1,10),
                                             })
                         ).ToArray();
         }
@@ -102,25 +115,43 @@ public class DynamicHexMutliRandomDirect : MonoBehaviour
             return builders.Select(x => x.BuildInStep()).ToArray();
         }
 
+        public (int x, int y)[][] Build()
+        {
+            do
+            {
+                foreach (var builder in builders.Where(x => !x.isFinish))
+                {
+                    builder.BuildInStep();
+                }
+            } while (builders.Any(x => !x.isFinish));
+
+            return builders.Select(x => x.centers.ToArray()).ToArray();
+        }
+
         public class StepResult
         {
             public (int x, int y)[] elements;
         }
 
-        public class Builder
+        private class Builder
         {
-            private HashSet<(int x, int y)> centers;
+            internal static System.Func<(int x, int y), bool> isExist { get; set; }
+
+            public bool isFinish { get; private set; } = false;
+
+            public HashSet<(int x, int y)> centers;
             private HashSet<(int x, int y)> edges;
             private int size;
             private bool isStart = true;
+
             private (int x, int y) originPoint;
             private int[] weightDirectValues;
 
-            public Builder(int size, (int x, int y) originPoint, HashSet<(int x, int y)> centers, int[] weightDirectValues)
+            public Builder(int size, (int x, int y) originPoint, int[] weightDirectValues)
             {
                 edges = new HashSet<(int x, int y)>();
 
-                this.centers = centers;
+                this.centers = new HashSet<(int x, int y)>();
                 this.originPoint = originPoint;
                 this.size = size;
                 this.weightDirectValues = weightDirectValues;
@@ -138,10 +169,12 @@ public class DynamicHexMutliRandomDirect : MonoBehaviour
                 }
 
                 var tempEdges = edges.SelectMany(x => Hexagon.GetNeighbors(x))
-                    .Where(n => !centers.Contains(n))
+                    .Where(n => !isExist(n))
                     .Where(n => (int)System.Math.Abs(n.x) < size && (int)System.Math.Abs(n.y) < size)
                     .ToHashSet();
 
+                isFinish = tempEdges.Count() == 0;
+                
                 var newEdges = new HashSet<(int x, int y)>();
                 var revEdges = new HashSet<(int x, int y)>();
 
@@ -151,7 +184,7 @@ public class DynamicHexMutliRandomDirect : MonoBehaviour
 
                     var value = oldEdges.Max(e => weightDirectValues[Hexagon.GetDirectIndex(e, edge)]);
 
-                    var real = Random.Range(1, 11);
+                    var real = Random.Range(1, 10);
                     if (real <= value)
                     {
                         newEdges.Add(edge);
@@ -171,6 +204,4 @@ public class DynamicHexMutliRandomDirect : MonoBehaviour
             }
         }
     }
-
-    
 }
