@@ -69,4 +69,15 @@ public class MapMath
         var direct = (target.x - origin.x, target.y - origin.y);
         return Array.IndexOf(NeighbourIndexsRect, direct);
     }
+
+    internal static IEnumerable<(int x, int y)> GetRings((int x, int y) pos, int dist)
+    {
+        var range = Enumerable.Range(dist * -1, dist * 2+1);
+
+        return range.Select(x => (x, dist))
+            .Concat(range.Select(x => (x, dist * -1)))
+            .Concat(range.Select(y => (dist, y)))
+            .Concat(range.Select(y => (dist * -1, y))).Distinct()
+            .Select(index=> (pos.x + index.Item1, pos.y+index.Item2));
+    }
 }

@@ -29,6 +29,8 @@ public class DynamicRectMap : MonoBehaviour
 
     private Tile _tile;
 
+    private int dist = 1;
+
     BlockBuilder blockBuilder;
     // Start is called before the first frame update
     void Start()
@@ -46,16 +48,26 @@ public class DynamicRectMap : MonoBehaviour
 
     IEnumerator OnTimer()
     {
-        foreach (var elems in blockBuilder.Build())
-        {
-            foreach(var elem in elems)
-            {
-                var pos = new Vector3Int(elem.x, elem.y, 0);
-                var color = new Color(UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f));
+        //foreach (var elems in blockBuilder.Build())
+        //{
+        //    foreach(var elem in elems)
+        //    {
+        //        var pos = new Vector3Int(elem.x, elem.y, 0);
+        //        var color = new Color(UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f));
 
-                SetTileColor(pos, color);
-            }
+        //        SetTileColor(pos, color);
+        //    }
+        //}
+
+        foreach (var elem in MapMath.GetRings((0, 0), dist))
+        {
+            var pos = new Vector3Int(elem.x, elem.y, 0);
+            var color = new Color(UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f));
+
+            SetTileColor(pos, color);
         }
+
+        dist++;
 
         yield return new WaitForSeconds(1);
 

@@ -92,6 +92,22 @@ public class DynamicHexMutliRandomDirect : MonoBehaviour
     }
 }
 
+public class Block
+{
+    public HashSet<(int x, int y)> elements;
+    public HashSet<(int x, int y)> edges;
+
+    public Block(HashSet<(int x, int y)> elements)
+    {
+        this.elements = elements;
+        this.edges = elements.Where(x => Hexagon.GetNeighbors(x).Any(n => !elements.Contains(n))).ToHashSet();
+    }
+
+    public bool isNeighbor(Block peer)
+    {
+        return this.edges.Any(e => Hexagon.GetNeighbors(e).Intersect(peer.edges).Any());
+    }
+}
 public class BlockBuilderGroup
 {
     const int step = 10;
@@ -147,23 +163,6 @@ public class BlockBuilderGroup
     public class StepResult
     {
         public (int x, int y)[] elements;
-    }
-
-    public class Block
-    {
-        public HashSet<(int x, int y)> elements;
-        public HashSet<(int x, int y)> edges;
-
-        public Block(HashSet<(int x, int y)> elements)
-        {
-            this.elements = elements;
-            this.edges = elements.Where(x => Hexagon.GetNeighbors(x).Any(n => !elements.Contains(n))).ToHashSet();
-        }
-
-        public bool isNeighbor(Block peer)
-        {
-            return this.edges.Any(e => Hexagon.GetNeighbors(e).Intersect(peer.edges).Any());
-        }
     }
 
     private class Builder
